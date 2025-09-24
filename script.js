@@ -1,11 +1,35 @@
 // 젬 타입별 데이터 정의 (의지력 범위 포함)
 const gemTypes = {
-  "질서-안정": { willMin:3, willMax:8, effects:["공격력","추가 피해","낙인력","아군 피해 강화"] },
-  "질서-견고": { willMin:4, willMax:9, effects:["공격력","보스 피해","아군 피해 강화","아군 공격 강화"] },
-  "질서-불변": { willMin:5, willMax:10, effects:["추가 피해","보스 피해","낙인력","아군 공격 강화"] },
-  "혼돈-침식": { willMin:3, willMax:8, effects:["공격력","추가 피해","낙인력","아군 피해 강화"] },
-  "혼돈-왜곡": { willMin:4, willMax:9, effects:["공격력","보스 피해","아군 피해 강화","아군 공격 강화"] },
-  "혼돈-붕괴": { willMin:5, willMax:10, effects:["추가 피해","보스 피해","낙인력","아군 공격 강화"] }
+  "질서-안정": { 
+    willMin:3, willMax:8, 
+    effects:["공격력","추가 피해","낙인력","아군 피해 강화"],
+    faction: "질서"
+  },
+  "질서-견고": { 
+    willMin:4, willMax:9, 
+    effects:["공격력","보스 피해","아군 피해 강화","아군 공격 강화"],
+    faction: "질서"
+  },
+  "질서-불변": { 
+    willMin:5, willMax:10, 
+    effects:["추가 피해","보스 피해","낙인력","아군 공격 강화"],
+    faction: "질서"
+  },
+  "혼돈-침식": { 
+    willMin:3, willMax:8, 
+    effects:["공격력","추가 피해","낙인력","아군 피해 강화"],
+    faction: "혼돈"
+  },
+  "혼돈-왜곡": { 
+    willMin:4, willMax:9, 
+    effects:["공격력","보스 피해","아군 피해 강화","아군 공격 강화"],
+    faction: "혼돈"
+  },
+  "혼돈-붕괴": { 
+    willMin:5, willMax:10, 
+    effects:["추가 피해","보스 피해","낙인력","아군 공격 강화"],
+    faction: "혼돈"
+  }
 };
 
 let currentCore = { name:null, will:0, points:[], faction:null };
@@ -35,13 +59,14 @@ function ensureSummaryBar(){
 function updateSummary(){
   const summary = ensureSummaryBar();
   if(!summary) return;
-  if(currentCore.name && currentCore.faction && currentRole){
-    summary.innerText = `${currentCore.name} / ${currentCore.faction} / ${currentRole}`;
-    summary.style.display = "block";
-  } else {
-    summary.innerText = "";
-    summary.style.display = "none";
-  }
+  
+  // 각 선택 상태를 실시간으로 표시
+  const coreText = currentCore.name || "미선택";
+  const factionText = currentCore.faction || "미선택";
+  const roleText = currentRole || "미선택";
+  
+  summary.innerText = `${coreText} / ${factionText} / ${roleText}`;
+  summary.style.display = "block";
 }
 
 // 코어 선택
@@ -118,10 +143,13 @@ function addGem(){
         </select>
       </label>
       의지력 <input type="number" class="big-input" id="gem${gemCount}Will" 
-                  style="width:60px; font-size:14px; padding:2px 4px;">
+                  style="width:60px; font-size:14px; padding:2px 4px; color:#999; font-style:italic;"
+                  placeholder="젬 타입을 먼저 선택하세요"
+                  onchange="validateGemWill(${gemCount})">
       포인트 <input type="number" class="big-input" id="gem${gemCount}Point" 
-                  min="1" max="9" value="1" 
-                  style="width:60px; font-size:14px; padding:2px 4px;">
+                  min="1" max="5" value="1" 
+                  style="width:60px; font-size:14px; padding:2px 4px;"
+                  onchange="validateGemPoint(${gemCount})">
       <button onclick="removeGem(${gemCount})" 
               style="margin-left:8px; padding:2px 6px;">삭제</button>
     </div>
@@ -148,14 +176,52 @@ function removeGem(num){
   if(block) block.remove();
 }
 
+// 체크박스 토글 시 숫자 입력 표시/숨김
+function toggleEffect(num, idx){
+  const checkbox = document.getElementById(`gem${num}Eff${idx}`);
+  const input = document.getElementById(`gem${num}EffVal${idx}`);
+  
+  if(checkbox.checked){
+    input.style.display = "inline-block";
+    input.value = ""; // 빈 값으로 설정
+  } else {
+    input.style.display = "none";
+    input.value = "";
+  }
+}
+
+// 드롭다운 → 숫자 입력 동기화
+function syncInputs(num, idx){
+  const select = document.getElementById(`gem${num}EffVal${idx}`);
+  const input = document.getElementById(`gem${num}EffInput${idx}`);
+  if(select && input){
+    input.value = select.value;
+  }
+}
+
+// 숫자 입력 → 드롭다운 동기화
+function syncSelects(num, idx){
+  const input = document.getElementById(`gem${num}EffInput${idx}`);
+  const select = document.getElementById(`gem${num}EffVal${idx}`);
+  if(input && select){
+    select.value = input.value;
+  }
+}
+
 // 효과 선택 제한 (최대 2개)
 function limitEffects(num, event){
   const effectsDiv = document.getElementById(`gem${num}Effects`);
-  const checks = effectsDiv.querySelectorAll("input[type=checkbox]");
-  const checked = [...checks].filter(c=>c.checked);
+  const checkboxes = effectsDiv.querySelectorAll("input[type=checkbox]");
+  const checked = [...checkboxes].filter(c=>c.checked);
   if(checked.length > 2){
     alert("효과는 최대 2개까지만 선택 가능합니다.");
-    event.target.checked = false;
+    // 가장 마지막에 체크된 것을 자동으로 해제
+    const lastChecked = [...checkboxes].filter(c=>c.checked).pop();
+    if(lastChecked){
+      lastChecked.checked = false;
+      const input = document.getElementById(`gem${num}EffVal${lastChecked.id.replace('Eff', 'EffVal')}`);
+      if(input) input.style.display = "none";
+    }
   }
 }
 
@@ -170,22 +236,68 @@ function updateGemOptions(num){
     willInput.min = gem.willMin;
     willInput.max = gem.willMax;
     willInput.placeholder = `${gem.willMin}~${gem.willMax}`;
+    willInput.style.color = "#666";
+    willInput.style.fontStyle = "italic";
+    
+    // 기본값을 빈 값으로 설정
+    willInput.value = ""; // 빈 값으로 설정
+    const pointInput = document.getElementById(`gem${num}Point`);
+    pointInput.value = ""; // 빈 값으로 설정
 
     effectsDiv.innerHTML = "";
     gem.effects.forEach((eff, idx)=>{
       effectsDiv.innerHTML += `
-        <label style="display:inline-block; margin:4px 8px 4px 0;">
-          <input type="checkbox" id="gem${num}Eff${idx}" onchange="limitEffects(${num}, event)">
-          ${eff} 값:
-          <input type="number" class="big-input" id="gem${num}EffVal${idx}" value="1" min="1" max="5" 
-                 style="width:60px; font-size:14px; padding:2px 4px;">
-        </label>
+        <div style="margin:4px 0;">
+          <label style="display:inline-block; margin-right:8px;">
+            <input type="checkbox" id="gem${num}Eff${idx}" onchange="toggleEffect(${num}, ${idx}); limitEffects(${num}, event)">
+            ${eff} 값:
+          </label>
+          <input type="number" id="gem${num}EffVal${idx}" min="1" max="5" value="" 
+                 placeholder="1-5"
+                 style="width:60px; font-size:14px; padding:2px 4px; display:none;">
+        </div>
       `;
     });
   } else {
     willInput.value = "";
+    willInput.placeholder = "젬 타입을 먼저 선택하세요";
+    willInput.style.color = "#999";
+    willInput.style.fontStyle = "italic";
     effectsDiv.innerHTML = "";
   }
+}
+
+// 젬 포인트 유효성 검사 (코어 활성화 포인트)
+function validateGemPoint(num){
+  const pointInput = document.getElementById(`gem${num}Point`);
+  const point = parseInt(pointInput.value) || 0;
+  
+  if(point < 1 || point > 5){
+    alert(`젬${num} 포인트는 1~5 사이의 값이어야 합니다.`);
+    pointInput.value = Math.max(1, Math.min(5, point));
+    return false;
+  }
+  return true;
+}
+
+// 젬 의지력 유효성 검사
+function validateGemWill(num){
+  const type = document.getElementById(`gem${num}Type`).value;
+  const willInput = document.getElementById(`gem${num}Will`);
+  const will = parseInt(willInput.value) || 0;
+  
+  if(type && gemTypes[type]){
+    const gem = gemTypes[type];
+    if(will < gem.willMin || will > gem.willMax){
+      alert(`젬${num} 의지력은 ${gem.willMin}~${gem.willMax} 사이의 값이어야 합니다.`);
+      willInput.value = Math.max(gem.willMin, Math.min(gem.willMax, will));
+      return false;
+    }
+    // 유효한 값 입력 시 스타일 정상화
+    willInput.style.color = "#000";
+    willInput.style.fontStyle = "normal";
+  }
+  return true;
 }
 
 // 페이지 로드 시 기본 젬 1개 + 요약 바 생성
@@ -197,6 +309,138 @@ window.onload = function(){
 // 공격형/지원형 분류
 const atkEffects = ["공격력","추가 피해","보스 피해"];
 const supEffects = ["낙인력","아군 피해 강화","아군 공격 강화"];
+
+// 젬 평가 및 추천 함수
+function evaluateGems(gems, currentRole){
+  return gems.map((gem, index) => {
+    let roleScore = 0;
+    let roleSuitability = "낮음";
+    
+    if(currentRole === "딜러"){
+      roleScore = gem.dealerScore;
+      if(roleScore >= 4) roleSuitability = "높음";
+      else if(roleScore >= 2) roleSuitability = "중간";
+    } else if(currentRole === "서포터"){
+      roleScore = gem.supporterScore;
+      if(roleScore >= 4) roleSuitability = "높음";
+      else if(roleScore >= 2) roleSuitability = "중간";
+    }
+    
+    return {
+      ...gem,
+      index: index + 1,
+      roleScore,
+      roleSuitability
+    };
+  });
+}
+
+// 젬 최적화 추천 함수 (우선순위: 코어 활성화 > 역할별 효과)
+function getOptimalGemCombination(gems, currentCore, currentRole){
+  const validGems = gems.filter(g => g.type && g.will > 0 && g.point > 0);
+  
+  // 의지력 제한 내에서 가능한 모든 조합 찾기
+  const combinations = [];
+  
+  function findCombinations(remainingGems, currentCombination, currentWill, currentPoint){
+    if(currentWill > currentCore.will) return; // 의지력 초과
+    
+    // 현재 조합이 유효한지 확인
+    if(currentCombination.length > 0){
+      // 1순위: 코어 활성화 확인
+      const canActivate = currentCore.points.some(point => currentPoint >= point);
+      
+      // 2순위: 역할별 점수 계산
+      const roleScore = currentCombination.reduce((sum, g) => 
+        currentRole === "딜러" ? sum + g.dealerScore : sum + g.supporterScore, 0);
+      
+      combinations.push({
+        gems: [...currentCombination],
+        totalWill: currentWill,
+        totalPoint: currentPoint,
+        canActivate: canActivate,
+        roleScore: roleScore,
+        // 우선순위 점수: 활성화 가능하면 높은 점수, 그 다음 역할 점수
+        priorityScore: canActivate ? 1000 + roleScore : roleScore
+      });
+    }
+    
+    // 다음 젬 추가 시도
+    for(let i = 0; i < remainingGems.length; i++){
+      const gem = remainingGems[i];
+      const newWill = currentWill + gem.will;
+      const newPoint = currentPoint + gem.point;
+      
+      if(newWill <= currentCore.will){
+        findCombinations(
+          remainingGems.slice(i + 1),
+          [...currentCombination, gem],
+          newWill,
+          newPoint
+        );
+      }
+    }
+  }
+  
+  findCombinations(validGems, [], 0, 0);
+  
+  // 우선순위 점수 순으로 정렬 (활성화 가능한 것 우선, 그 다음 역할 점수)
+  return combinations.sort((a, b) => b.priorityScore - a.priorityScore);
+}
+
+// 젬 추천 순위 계산 (활성화 우선 + 역할 점수)
+function getGemRecommendations(gems, currentCore, currentRole){
+  const validGems = gems.filter(g => g.type && g.will > 0 && g.point > 0);
+  
+  // 모든 가능한 젬 조합 찾기 (의지력 제한 내에서)
+  const combinations = [];
+  
+  function findCombinations(remainingGems, currentCombination, currentWill, currentPoint){
+    if(currentWill > currentCore.will) return; // 의지력 초과
+    
+    // 현재 조합이 유효한지 확인
+    if(currentCombination.length > 0){
+      // 활성화 가능 여부
+      const canActivate = currentCore.points.some(point => currentPoint >= point);
+      
+      // 역할 점수 계산
+      const roleScore = currentCombination.reduce((sum, g) => 
+        currentRole === "딜러" ? sum + g.dealerScore : sum + g.supporterScore, 0);
+      
+      combinations.push({
+        gems: [...currentCombination],
+        gemNumbers: currentCombination.map(g => g.index), // 젬 번호 추가
+        totalWill: currentWill,
+        totalPoint: currentPoint,
+        canActivate: canActivate,
+        roleScore: roleScore,
+        // 우선순위: 활성화 > 역할 점수
+        priorityScore: (canActivate ? 100000 : 0) + roleScore
+      });
+    }
+    
+    // 다음 젬 추가 시도
+    for(let i = 0; i < remainingGems.length; i++){
+      const gem = remainingGems[i];
+      const newWill = currentWill + gem.will;
+      const newPoint = currentPoint + gem.point;
+      
+      if(newWill <= currentCore.will){
+        findCombinations(
+          remainingGems.slice(i + 1),
+          [...currentCombination, gem],
+          newWill,
+          newPoint
+        );
+      }
+    }
+  }
+  
+  findCombinations(validGems, [], 0, 0);
+  
+  // 우선순위 점수 순으로 정렬 (활성화 > 역할 점수)
+  return combinations.sort((a, b) => b.priorityScore - a.priorityScore);
+}
 
 // 계산하기
 function calculate(){
@@ -225,6 +469,7 @@ function calculate(){
         if(chk.checked){
           const effName = gemTypes[type].effects[idx];
           const val = parseInt(document.getElementById(`gem${num}EffVal${idx}`).value) || 0;
+          
           if(val < 1 || val > 5){
             alert(`젬${num} 효과 ${effName} 잘못된 입력입니다.`);
           } else {
@@ -236,28 +481,30 @@ function calculate(){
       });
     }
 
-    gems.push({type, will, point, effects, dealerScore, supporterScore});
+    gems.push({type, will, point, effects, dealerScore, supporterScore, index: parseInt(num)});
   });
 
-  const sumWill = gems.reduce((a,g)=>a+g.will,0);
-  const sumPoint = gems.reduce((a,g)=>a+g.point,0);
+  // 화면 표시용 (젬 조합 추천만)
+  let displayText = `[젬 조합 추천 (${currentRole} 역할 기준)]\n`;
+  const recommendations = getGemRecommendations(gems, currentCore, currentRole);
+  recommendations.slice(0, 5).forEach((combo, idx) => {
+    displayText += `${idx + 1}. 젬${combo.gemNumbers.join(", ")} 조합 - `;
+    displayText += `활성화: ${combo.canActivate ? "O" : "X"} / ${currentRole} 점수: ${combo.roleScore} / `;
+    displayText += `의지력: ${combo.totalWill}/${currentCore.will} / 포인트: ${combo.totalPoint}\n`;
+  });
 
-  let canEquip = sumWill <= currentCore.will;
-  let activeZones = currentCore.points.map(p => `${p}P: ${sumPoint>=p?"O":"X"}`).join(" / ");
-
-  let text = `[코어] ${currentCore.name} (의지력 ${currentCore.will}, 계열 ${currentCore.faction}) / 역할 ${currentRole}\n`;
+  // 저장용 (젬 정보만)
+  let saveText = `[젬 정보]\n`;
   gems.forEach((g,i)=>{
-    text += `[젬${i+1}] ${g.type || "-"} (의지력 ${g.will}, 포인트 ${g.point})\n`;
-    text += `효과: ${g.effects.join(", ")}\n`;
-    text += `→ 딜러 점수: ${g.dealerScore} / 서포터 점수: ${g.supporterScore}\n`;
-    if(currentRole === "딜러") text += `★ 내 점수(딜러): ${g.dealerScore}\n`;
-    if(currentRole === "서포터") text += `★ 내 점수(서포터): ${g.supporterScore}\n`;
+    saveText += `[젬${i+1}]\n`;
+    saveText += `종류: ${g.type || "-"}\n`;
+    saveText += `의지력: ${g.will}\n`;
+    saveText += `포인트: ${g.point}\n`;
+    saveText += `부여효과: ${g.effects.join(", ") || "없음"}\n\n`;
   });
-  text += `[결과]\n총합 의지력: ${sumWill}\n총합 포인트: ${sumPoint}\n`
-        + `코어 장착 가능: ${canEquip?"O":"X"}\n활성화 구간: ${activeZones}`;
 
-  document.getElementById("result").innerText = text;
-  document.getElementById("saveText").value = text;
+  document.getElementById("result").innerText = displayText;
+  document.getElementById("saveText").value = saveText;
 }
 
 // 입력값 초기화
@@ -304,91 +551,86 @@ function saveToFile(){
   URL.revokeObjectURL(url);
 }
 
-// 불러오기 (붙여넣은 텍스트 파싱 → 젬 자동 생성/입력, 잘못된 값은 무시)
+// 불러오기 (젬 정보 파싱해서 젬 생성)
 function loadFromText(){
   const text = document.getElementById("saveText").value;
   if(!text){ alert("불러올 텍스트가 없습니다."); return; }
 
   const lines = text.split("\n");
-  const coreLine = lines[0];
-  const coreMatch = coreLine.match(/\[코어\] (\S+) \(의지력 (\d+), 계열 (\S+)\) \/ 역할 (\S+)/);
-  if(coreMatch){
-    currentCore.name = coreMatch[1];
-    currentCore.will = parseInt(coreMatch[2]);
-    currentCore.faction = coreMatch[3];
-    currentRole = coreMatch[4];
-
-    const coreBtns = document.getElementById("coreButtons");
-    const facBtns = document.getElementById("factionButtons");
-    const roleBox = document.querySelector(".role-buttons");
-    if(coreBtns) coreBtns.style.display = "none";
-    if(facBtns) facBtns.style.display = "none";
-    if(roleBox) roleBox.style.display = "none";
-    updateSummary();
-  }
+  
+  // 젬 정보 파싱
+  let currentGemIdx = 0;
+  let currentGemData = null;
 
   document.getElementById("gemsContainer").innerHTML = "";
   gemCount = 0;
-  let currentGemIdx = 0;
 
-  lines.forEach(line=>{
-    const gemMatch = line.match(/\[젬(\d+)\] (\S+) \(의지력 (\d+), 포인트 (\d+)\)/);
-    if(gemMatch){
-      currentGemIdx = parseInt(gemMatch[1]);
-      const type = gemMatch[2];
-      const will = parseInt(gemMatch[3]);
-      const point = parseInt(gemMatch[4]);
-
-      addGem();
-
-      const sel = document.getElementById(`gem${currentGemIdx}Type`);
-      sel.innerHTML = `<option value="${type}">${type}</option>`;
-      sel.value = type;
-      updateGemOptions(currentGemIdx);
-
-      const gem = gemTypes[type];
-      if(will < gem.willMin || will > gem.willMax){
-        alert(`젬${currentGemIdx} 의지력 잘못된 입력입니다.`);
-      } else {
-        document.getElementById(`gem${currentGemIdx}Will`).value = will;
-      }
-
-      if(point < 1 || point > 9){
-        alert(`젬${currentGemIdx} 포인트 잘못된 입력입니다.`);
-      } else {
-        document.getElementById(`gem${currentGemIdx}Point`).value = point;
+  lines.forEach((line, idx)=>{
+    // 젬 정보 파싱
+    if(line.startsWith("[젬")){
+      const gemMatch = line.match(/\[젬(\d+)\]/);
+      if(gemMatch){
+        currentGemIdx = parseInt(gemMatch[1]);
+        currentGemData = {};
       }
     }
 
-    if(line.startsWith("효과:")){
-      const effects = line.replace("효과: ","").split(",");
-      let applied = 0;
-      for(const eff of effects){
-        if(applied >= 2) break;
-        const m = eff.trim().match(/(.+?) Lv(\d+)/);
-        if(m){
-          const effName = m[1];
-          const val = parseInt(m[2]);
-          if(val < 1 || val > 5){
-            alert(`효과 ${effName} 잘못된 입력입니다.`);
-            continue;
+    if(currentGemData){
+      if(line.startsWith("종류:")){
+        currentGemData.type = line.replace("종류: ", "").trim();
+      } else if(line.startsWith("의지력:")){
+        currentGemData.will = parseInt(line.replace("의지력: ", "").trim());
+      } else if(line.startsWith("포인트:")){
+        currentGemData.point = parseInt(line.replace("포인트: ", "").trim());
+      } else if(line.startsWith("부여효과:")){
+        currentGemData.effects = line.replace("부여효과: ", "").trim();
+        
+        // 젬 생성 및 데이터 입력
+        if(currentGemData.type && currentGemData.will && currentGemData.point){
+          addGem();
+          
+          const sel = document.getElementById(`gem${currentGemIdx}Type`);
+          if(sel){
+            sel.innerHTML = `<option value="${currentGemData.type}">${currentGemData.type}</option>`;
+            sel.value = currentGemData.type;
+            updateGemOptions(currentGemIdx);
           }
-          const gem = gemTypes[document.getElementById(`gem${currentGemIdx}Type`).value];
-          if(gem){
-            const idx = gem.effects.indexOf(effName);
-            if(idx>=0){
-              const cb = document.getElementById(`gem${currentGemIdx}Eff${idx}`);
-              const lv = document.getElementById(`gem${currentGemIdx}EffVal${idx}`);
-              if(cb && lv){
-                if(!cb.checked){
-                  cb.checked = true;
-                  applied++;
+
+          const willInput = document.getElementById(`gem${currentGemIdx}Will`);
+          const pointInput = document.getElementById(`gem${currentGemIdx}Point`);
+          if(willInput) willInput.value = currentGemData.will;
+          if(pointInput) pointInput.value = currentGemData.point;
+
+          // 효과 설정
+          if(currentGemData.effects && currentGemData.effects !== "없음"){
+            const effects = currentGemData.effects.split(",");
+            let applied = 0;
+            for(const eff of effects){
+              if(applied >= 2) break;
+              const m = eff.trim().match(/(.+?) Lv(\d+)/);
+              if(m){
+                const effName = m[1].trim();
+                const val = parseInt(m[2]);
+                if(val >= 1 && val <= 5){
+                  const gem = gemTypes[currentGemData.type];
+                  if(gem){
+                    const effIdx = gem.effects.indexOf(effName);
+                    if(effIdx >= 0){
+                      const cb = document.getElementById(`gem${currentGemIdx}Eff${effIdx}`);
+                      const lv = document.getElementById(`gem${currentGemIdx}EffVal${effIdx}`);
+                      if(cb && lv){
+                        cb.checked = true;
+                        lv.value = val;
+                        applied++;
+                      }
+                    }
+                  }
                 }
-                lv.value = val;
               }
             }
           }
         }
+        currentGemData = null;
       }
     }
   });
