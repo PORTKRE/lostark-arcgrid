@@ -175,6 +175,7 @@ input[type="checkbox"] {
   accent-color: var(--primary-color);
 }
 
+
 /* 모바일 대응 */
 @media (max-width: 768px) {
   body {
@@ -198,4 +199,5 @@ input[type="checkbox"] {
     padding: 10px 20px;
     font-size: 13px;
   }
+  
 }
