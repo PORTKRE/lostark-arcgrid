@@ -637,3 +637,111 @@ function loadFromText(){
 
   alert("불러오기 완료!");
 }
+
+
+// 설명서 새창으로 열기
+function toggleHelp(){
+  const helpContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>아크 그리드 계산기 설명서</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f8f9fa; }
+        .help-content { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; font-size: 28px; margin-bottom: 20px; text-align: center; }
+        h5 { color: #4a90e2; margin: 20px 0 12px 0; font-size: 20px; font-weight: 700; border-bottom: 2px solid #e9ecef; padding-bottom: 6px; }
+        p { margin: 12px 0; font-size: 18px; line-height: 1.6; color: #2c3e50; }
+        strong { color: #4a90e2; font-weight: 700; font-size: 19px; }
+        .controls { text-align: center; margin: 20px 0; }
+        .font-controls { text-align: center; margin: 15px 0; padding: 10px; background: #f8f9fa; border-radius: 8px; }
+        button { background: #4a90e2; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin: 0 5px; }
+        button:hover { background: #357abd; }
+        .font-btn { background: #6c757d; padding: 6px 12px; font-size: 14px; }
+        .font-btn:hover { background: #5a6268; }
+      </style>
+    </head>
+    <body>
+      <div class="help-content">
+        <h2>📖 아크 그리드 계산기 설명서</h2>
+        
+        <div class="font-controls">
+          <span style="margin-right: 10px; font-weight: bold;">글자 크기:</span>
+          <button onclick="adjustFontSize(-0.1)" class="font-btn" title="글자 크기 줄이기">A-</button>
+          <button onclick="adjustFontSize(0.1)" class="font-btn" title="글자 크기 키우기">A+</button>
+          <button onclick="resetFontSize()" class="font-btn" title="기본 크기로">초기화</button>
+        </div>
+        
+        <h5>🎯 사용법</h5>
+        <p><strong>1. 코어 선택:</strong> 영웅, 전설, 유물, 고대 중 선택</p>
+        <p><strong>2. 젬 설정:</strong> 젬 타입, 의지력, 포인트, 효과 선택</p>
+        <p><strong>3. 계산:</strong> 자동으로 최적 조합 계산 및 추천</p>
+        <p><strong>4. 저장:</strong> 계산 결과를 복사하거나 파일로 저장 가능</p>
+        <p><strong>5. 불러오기:</strong> 저장된 텍스트를 불러와서 젬 설정 복원 가능</p>
+        
+        
+        <h5>⚔️ 효과 분류</h5>
+        <p><strong>딜러용:</strong> 공격력, 추가 피해, 보스 피해</p>
+        <p><strong>서포터용:</strong> 낙인력, 아군 피해 강화, 아군 공격 강화</p>
+        
+        <h5>🔧 코어 활성화</h5>
+        <p>젬 포인트 합계가 코어 요구 포인트 이상이면 활성화</p>
+        <p>영웅: 10포인트, 전설: 10/14포인트, 유물/고대: 10/14/17/18/19/20포인트</p>
+        
+        <h5>💾 저장/불러오기</h5>
+        <p>계산 후 젬 정보를 복사하거나 파일로 저장 가능</p>
+        <p>저장된 텍스트를 불러와서 젬 설정 복원 가능</p>
+        
+        <h5>🎮 게임 팁</h5>
+        <p><strong>젬 조합 전략:</strong> 코어 활성화를 우선으로 하되, 역할에 맞는 효과를 선택하세요</p>
+        <p><strong>의지력 관리:</strong> 코어의 의지력 한계 내에서 최대한 많은 젬을 장착하세요</p>
+        <p><strong>효과 선택:</strong> 딜러는 공격력/추가피해/보스피해, 서포터는 낙인력/아군강화 효과를 우선하세요</p>
+        
+        <h5>⚠️ 주의사항</h5>
+        <p>젬 타입은 계열(질서/혼돈)에 따라 제한됩니다</p>
+        <p>효과는 젬당 최대 2개까지만 선택 가능합니다</p>
+        <p>의지력과 포인트는 젬 타입별로 정해진 범위 내에서만 설정 가능합니다</p>
+        
+        <h5>🔍 계산기 기능</h5>
+        <p><strong>자동 추천:</strong> 입력한 젬들로 가능한 모든 조합을 계산하여 최적의 조합을 추천합니다</p>
+        <p><strong>활성화 확인:</strong> 코어 활성화 가능 여부를 자동으로 확인합니다</p>
+        <p><strong>역할별 점수:</strong> 딜러/서포터 역할에 맞는 효과 점수를 계산합니다</p>
+        
+        <div class="controls">
+          <button onclick="window.close()">닫기</button>
+        </div>
+      </div>
+      
+      <script>
+        let currentFontScale = 1.0; // 기본 배율
+        
+        function adjustFontSize(delta) {
+          currentFontScale += delta;
+          currentFontScale = Math.max(0.5, Math.min(2.0, currentFontScale)); // 0.5배 ~ 2배 제한
+          
+          // 모든 텍스트 요소에 배율 적용
+          const elements = document.querySelectorAll('h2, h5, p, strong');
+          elements.forEach(element => {
+            const currentSize = parseFloat(getComputedStyle(element).fontSize);
+            const baseSize = currentSize / (currentFontScale - delta);
+            element.style.fontSize = (baseSize * currentFontScale) + 'px';
+          });
+        }
+        
+        function resetFontSize() {
+          currentFontScale = 1.0;
+          // 모든 텍스트 요소를 기본 크기로 복원
+          const elements = document.querySelectorAll('h2, h5, p, strong');
+          elements.forEach(element => {
+            element.style.fontSize = '';
+          });
+        }
+      </script>
+    </body>
+    </html>
+  `;
+  
+  const newWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+  newWindow.document.write(helpContent);
+  newWindow.document.close();
+}
