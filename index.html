@@ -46,8 +46,20 @@
 
   <!-- 젬 입력 -->
   <h3>젬 입력</h3>
+  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+    <button onclick="addGem()">젬 추가</button>
+    <button id="voiceBtn" onclick="toggleVoiceRecognition()" style="background: linear-gradient(135deg, #ff6b6b, #ff8e8e);">
+      🎤 음성입력
+    </button>
+    <div id="voiceGemsList" style="margin-left: 10px; padding: 8px; background: #f8f9fa; border-radius: 5px; font-size: 14px;">
+      <strong>음성명령:</strong> <span id="availableGems">계열을 선택하면 표시됩니다</span>
+    </div>
+  </div>
+  <div id="voiceInputDisplay" style="margin: 15px 0; padding: 15px; background: linear-gradient(135deg, #e3f2fd, #f3e5f5); border-radius: 10px; border: 2px solid #4a90e2; display: none;">
+    <strong>🎤 음성인식 결과:</strong>
+    <div id="voiceResultText" style="margin-top: 8px; font-size: 16px; color: #2c3e50; font-weight: bold; background: white; padding: 10px; border-radius: 5px; border: 1px solid #ddd;"></div>
+  </div>
   <div id="gemsContainer"></div>
-  <button onclick="addGem()">젬 추가</button>
 
   <hr>
 
@@ -75,7 +87,7 @@
     </div>
 
 
-    <script src="script.js"></script>
+    <script src="js/script.js"></script>
   </div>
 </body>
 </html>
