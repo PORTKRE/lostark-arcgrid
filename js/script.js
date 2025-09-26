@@ -205,8 +205,51 @@ function processVoiceCommand(text){
   
   if(gemType){
     // 의지력이나 포인트가 포함되어 있을 때만 젬 추가
-    const willMatch = text.match(/(?:의지력|을지력)\s*(\d+)/);
-    const pointMatch = text.match(/포인트\s*(\d+)/);
+    // 의지력 인식 패턴 개선 (숫자 인식 강화)
+    let willMatch = text.match(/(?:의지력|을지력|의지|을지)\s*(?:이|가|은|는)?\s*(\d+)/);
+    let pointMatch = text.match(/포인트\s*(?:이|가|은|는)?\s*(\d+)/);
+    
+    // 추가 패턴: 의지력 뒤에 오는 숫자 찾기
+    if(!willMatch) {
+      willMatch = text.match(/(?:의지력|을지력|의지|을지)\s*[^\d]*(\d+)/);
+    }
+    
+    // 한글 숫자 지원 (사, 삼, 사, 오 등)
+    if(!willMatch) {
+      const koreanNumbers = {'일': '1', '이': '2', '삼': '3', '사': '4', '오': '5'};
+      const koreanMatch = text.match(/(?:의지력|을지력|의지|을지)\s*[^\d]*(일|이|삼|사|오)/);
+      if(koreanMatch && koreanNumbers[koreanMatch[1]]) {
+        willMatch = [koreanMatch[0], koreanNumbers[koreanMatch[1]]];
+      }
+    }
+    
+    // 특수 패턴: "의지력 사업" → "의지력 4"로 인식
+    if(!willMatch) {
+      const businessMatch = text.match(/(?:의지력|을지력|의지|을지)\s*사업/);
+      if(businessMatch) {
+        willMatch = [businessMatch[0], '4'];
+        console.log('사업 → 4로 변환됨');
+      }
+    }
+    
+    // 추가 패턴: 포인트 뒤에 오는 숫자 찾기  
+    if(!pointMatch) {
+      pointMatch = text.match(/포인트\s*[^\d]*(\d+)/);
+    }
+    
+    // 포인트 한글 숫자 지원
+    if(!pointMatch) {
+      const koreanNumbers = {'일': '1', '이': '2', '삼': '3', '사': '4', '오': '5'};
+      const koreanMatch = text.match(/포인트\s*[^\d]*(일|이|삼|사|오)/);
+      if(koreanMatch && koreanNumbers[koreanMatch[1]]) {
+        pointMatch = [koreanMatch[0], koreanNumbers[koreanMatch[1]]];
+      }
+    }
+    
+    // 디버깅용 로그
+    console.log('의지력 매칭 결과:', willMatch);
+    console.log('포인트 매칭 결과:', pointMatch);
+    console.log('원본 텍스트:', text);
     
     if(willMatch && pointMatch){
       // 젬 추가
