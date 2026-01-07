@@ -36,6 +36,181 @@ let currentCore = { name:null, will:0, points:[], faction:null };
 let currentRole = null;
 let gemCount = 0;
 
+// 젬 조합 관련 변수
+let gemCombinations = [];
+let recommendedCombinations = [];
+
+// 젬 조합 생성기 (4개 젬으로 가능한 모든 조합)
+function generateGemCombinations() {
+  if (!currentCore.faction) {
+    alert("먼저 계열을 선택하세요!");
+    return;
+  }
+  
+  const availableGems = Object.keys(gemTypes).filter(gemType => 
+    gemTypes[gemType].faction === currentCore.faction
+  );
+  
+  
+  // 4개 젬으로 가능한 모든 조합 생성
+  gemCombinations = [];
+  const combinations = getCombinations(availableGems, 4);
+  
+  combinations.forEach(combination => {
+    const combinationData = calculateCombinationStats(combination);
+    gemCombinations.push({
+      gems: combination,
+      stats: combinationData,
+      score: calculateCombinationScore(combinationData)
+    });
+  });
+  
+  // 점수순으로 정렬
+  gemCombinations.sort((a, b) => b.score - a.score);
+  recommendedCombinations = gemCombinations.slice(0, 10); // 상위 10개 추천
+  
+  console.log("젬 조합 생성 완료:", gemCombinations.length, "개 조합");
+}
+
+// 조합 생성 헬퍼 함수
+function getCombinations(arr, k) {
+  if (k === 1) return arr.map(item => [item]);
+  if (k === arr.length) return [arr];
+  
+  const combinations = [];
+  for (let i = 0; i <= arr.length - k; i++) {
+    const head = arr[i];
+    const tailCombinations = getCombinations(arr.slice(i + 1), k - 1);
+    tailCombinations.forEach(tail => {
+      combinations.push([head, ...tail]);
+    });
+  }
+  return combinations;
+}
+
+// 조합 통계 계산
+function calculateCombinationStats(combination) {
+  let totalWill = 0;
+  let totalPoints = 0;
+  let effects = {};
+  
+  combination.forEach(gemType => {
+    const gem = gemTypes[gemType];
+    totalWill += gem.willMin; // 최소 의지력으로 계산
+    totalPoints += 1; // 기본 포인트
+    
+    // 효과별 최대 레벨 계산
+    gem.effects.forEach(effect => {
+      if (!effects[effect]) effects[effect] = 0;
+      effects[effect] = Math.max(effects[effect], 5); // 최대 레벨 5
+    });
+  });
+  
+  return {
+    totalWill,
+    totalPoints,
+    effects,
+    effectCount: Object.keys(effects).length
+  };
+}
+
+// 조합 점수 계산
+function calculateCombinationScore(stats) {
+  let score = 0;
+  
+  // 1순위: 코어 활성화 (최우선)
+  const coreActivation = checkCoreActivation(stats.totalPoints);
+  if (coreActivation) {
+    score += 1000; // 코어 활성화 시 큰 점수 부여
+  }
+  
+  // 2순위: 역할별 효과 (딜러/서포터)
+  if (currentRole === '딜러') {
+    // 딜러용 효과: 공격력, 추가 피해, 보스 피해
+    const dealerEffects = ['공격력', '추가 피해', '보스 피해'];
+    dealerEffects.forEach(effect => {
+      if (stats.effects[effect]) {
+        score += stats.effects[effect] * 20; // 딜러 효과 높은 점수
+      }
+    });
+  } else if (currentRole === '서포터') {
+    // 서포터용 효과: 낙인력, 아군 피해 강화, 아군 공격 강화
+    const supporterEffects = ['낙인력', '아군 피해 강화', '아군 공격 강화'];
+    supporterEffects.forEach(effect => {
+      if (stats.effects[effect]) {
+        score += stats.effects[effect] * 20; // 서포터 효과 높은 점수
+      }
+    });
+  }
+  
+  // 3순위: 의지력/포인트 효율성
+  score += stats.totalWill * 5;
+  score += stats.totalPoints * 3;
+  
+  // 4순위: 효과 다양성
+  score += stats.effectCount * 10;
+  
+  return score;
+}
+
+// 코어 활성화 확인
+function checkCoreActivation(totalPoints) {
+  if (!currentCore.name) return false;
+  
+  const requiredPoints = {
+    '영웅': 10,
+    '전설': 10,
+    '유물': 10,
+    '고대': 10
+  };
+  
+  return totalPoints >= (requiredPoints[currentCore.name] || 10);
+}
+
+
+// 조합 적용
+function applyCombination(index) {
+  const combination = recommendedCombinations[index];
+  if (!combination) return;
+  
+  // 기존 젬들 모두 제거
+  clearAllGems();
+  
+  // 추천 조합의 젬들 추가
+  combination.gems.forEach((gemType, gemIndex) => {
+    addGem();
+    const latestGem = gemCount;
+    
+    // 젬 타입 설정
+    const typeSelect = document.getElementById(`gem${latestGem}Type`);
+    if (typeSelect) {
+      typeSelect.value = gemType;
+      updateGemOptions(latestGem);
+    }
+    
+    // 기본 의지력 설정 (최소값)
+    const willInput = document.getElementById(`gem${latestGem}Will`);
+    if (willInput) {
+      willInput.value = gemTypes[gemType].willMin;
+    }
+    
+    // 기본 포인트 설정
+    const pointInput = document.getElementById(`gem${latestGem}Point`);
+    if (pointInput) {
+      pointInput.value = 1;
+    }
+  });
+  
+  alert(`추천 조합이 적용되었습니다!\n젬: ${combination.gems.join(', ')}`);
+}
+
+// 모든 젬 제거
+function clearAllGems() {
+  const gemsContainer = document.getElementById('gemsContainer');
+  gemsContainer.innerHTML = '';
+  gemCount = 0;
+}
+
 // 음성인식 관련 변수
 let recognition = null;
 let isListening = false;
@@ -731,15 +906,19 @@ function getOptimalGemCombination(gems, currentCore, currentRole){
   
   function findCombinations(remainingGems, currentCombination, currentWill, currentPoint){
     if(currentWill > currentCore.will) return; // 의지력 초과
+    if(currentCombination.length > 4) return; // 최대 4개 제한
     
     // 현재 조합이 유효한지 확인
     if(currentCombination.length > 0){
-      // 1순위: 코어 활성화 확인
+      // 활성화 가능 여부
       const canActivate = currentCore.points.some(point => currentPoint >= point);
       
-      // 2순위: 역할별 점수 계산
+      // 역할별 점수 계산
       const roleScore = currentCombination.reduce((sum, g) => 
         currentRole === "딜러" ? sum + g.dealerScore : sum + g.supporterScore, 0);
+      
+      // 4개 조합에 보너스 점수 부여 (최대한 4개를 맞추는 것이 좋으므로)
+      const gemCountBonus = currentCombination.length === 4 ? 100 : 0;
       
       combinations.push({
         gems: [...currentCombination],
@@ -747,24 +926,26 @@ function getOptimalGemCombination(gems, currentCore, currentRole){
         totalPoint: currentPoint,
         canActivate: canActivate,
         roleScore: roleScore,
-        // 우선순위 점수: 활성화 가능하면 높은 점수, 그 다음 역할 점수
-        priorityScore: canActivate ? 1000 + roleScore : roleScore
+        // 우선순위 점수: 1순위 포인트 최대화(10000점 단위) > 2순위 역할 점수 > 3순위 4개 조합 보너스
+        priorityScore: (currentPoint * 10000) + (roleScore * 100) + gemCountBonus
       });
     }
     
-    // 다음 젬 추가 시도
-    for(let i = 0; i < remainingGems.length; i++){
-      const gem = remainingGems[i];
-      const newWill = currentWill + gem.will;
-      const newPoint = currentPoint + gem.point;
-      
-      if(newWill <= currentCore.will){
-        findCombinations(
-          remainingGems.slice(i + 1),
-          [...currentCombination, gem],
-          newWill,
-          newPoint
-        );
+    // 다음 젬 추가 시도 (4개 미만일 때만)
+    if(currentCombination.length < 4){
+      for(let i = 0; i < remainingGems.length; i++){
+        const gem = remainingGems[i];
+        const newWill = currentWill + gem.will;
+        const newPoint = currentPoint + gem.point;
+        
+        if(newWill <= currentCore.will){
+          findCombinations(
+            remainingGems.slice(i + 1),
+            [...currentCombination, gem],
+            newWill,
+            newPoint
+          );
+        }
       }
     }
   }
@@ -784,6 +965,7 @@ function getGemRecommendations(gems, currentCore, currentRole){
   
   function findCombinations(remainingGems, currentCombination, currentWill, currentPoint){
     if(currentWill > currentCore.will) return; // 의지력 초과
+    if(currentCombination.length > 4) return; // 최대 4개 제한
     
     // 현재 조합이 유효한지 확인
     if(currentCombination.length > 0){
@@ -794,6 +976,9 @@ function getGemRecommendations(gems, currentCore, currentRole){
       const roleScore = currentCombination.reduce((sum, g) => 
         currentRole === "딜러" ? sum + g.dealerScore : sum + g.supporterScore, 0);
       
+      // 4개 조합에 보너스 점수 부여 (최대한 4개를 맞추는 것이 좋으므로)
+      const gemCountBonus = currentCombination.length === 4 ? 100 : 0;
+      
       combinations.push({
         gems: [...currentCombination],
         gemNumbers: currentCombination.map(g => g.index), // 젬 번호 추가
@@ -801,24 +986,26 @@ function getGemRecommendations(gems, currentCore, currentRole){
         totalPoint: currentPoint,
         canActivate: canActivate,
         roleScore: roleScore,
-        // 우선순위: 활성화 > 역할 점수
-        priorityScore: (canActivate ? 100000 : 0) + roleScore
+        // 우선순위: 1순위 포인트 최대화(10000점 단위) > 2순위 역할 점수 > 3순위 4개 조합 보너스
+        priorityScore: (currentPoint * 10000) + (roleScore * 100) + gemCountBonus
       });
     }
     
-    // 다음 젬 추가 시도
-    for(let i = 0; i < remainingGems.length; i++){
-      const gem = remainingGems[i];
-      const newWill = currentWill + gem.will;
-      const newPoint = currentPoint + gem.point;
-      
-      if(newWill <= currentCore.will){
-        findCombinations(
-          remainingGems.slice(i + 1),
-          [...currentCombination, gem],
-          newWill,
-          newPoint
-        );
+    // 다음 젬 추가 시도 (4개 미만일 때만)
+    if(currentCombination.length < 4){
+      for(let i = 0; i < remainingGems.length; i++){
+        const gem = remainingGems[i];
+        const newWill = currentWill + gem.will;
+        const newPoint = currentPoint + gem.point;
+        
+        if(newWill <= currentCore.will){
+          findCombinations(
+            remainingGems.slice(i + 1),
+            [...currentCombination, gem],
+            newWill,
+            newPoint
+          );
+        }
       }
     }
   }
@@ -871,14 +1058,22 @@ function calculate(){
     gems.push({type, will, point, effects, dealerScore, supporterScore, index: parseInt(num)});
   });
 
+  // 젬 조합 추천 생성
+  generateGemCombinations();
+  
   // 화면 표시용 (젬 조합 추천만)
-  let displayText = `[젬 조합 추천 (${currentRole} 역할 기준)]\n`;
+  let displayText = `[젬 조합 추천 (${currentRole} 역할 기준, 최대 4개 조합)]\n`;
+  let displayText2 = `우선순위: 1) 포인트 최대화 → 2) ${currentRole} 옵션\n\n`;
   const recommendations = getGemRecommendations(gems, currentCore, currentRole);
   recommendations.slice(0, 5).forEach((combo, idx) => {
-    displayText += `${idx + 1}. 젬${combo.gemNumbers.join(", ")} 조합 - `;
-    displayText += `활성화: ${combo.canActivate ? "O" : "X"} / ${currentRole} 점수: ${combo.roleScore} / `;
-    displayText += `의지력: ${combo.totalWill}/${currentCore.will} / 포인트: ${combo.totalPoint}\n`;
+    displayText2 += `${idx + 1}. 젬${combo.gemNumbers.join(", ")} 조합 (${combo.gems.length}개) - `;
+    displayText2 += `포인트: ${combo.totalPoint} [${combo.canActivate ? "활성화 O" : "활성화 X"}] / `;
+    displayText2 += `${currentRole} 점수: ${combo.roleScore} / `;
+    displayText2 += `의지력: ${combo.totalWill}/${currentCore.will}`;
+    if(combo.gems.length === 4) displayText2 += ` [4개 최대 조합!]`;
+    displayText2 += `\n`;
   });
+  displayText += displayText2;
 
   // 저장용 (젬 정보만)
   let saveText = `[젬 정보]\n`;
@@ -1084,6 +1279,7 @@ function toggleHelp(){
         <p><strong>주의사항:</strong> 마이크 권한 허용 필요, 조용한 환경에서 사용 권장</p>
         
         
+        
         <h5>⚔️ 효과 분류</h5>
         <p><strong>딜러용:</strong> 공격력, 추가 피해, 보스 피해</p>
         <p><strong>서포터용:</strong> 낙인력, 아군 피해 강화, 아군 공격 강화</p>
@@ -1110,6 +1306,11 @@ function toggleHelp(){
         <p><strong>자동 추천:</strong> 입력한 젬들로 가능한 모든 조합을 계산하여 최적의 조합을 추천합니다</p>
         <p><strong>활성화 확인:</strong> 코어 활성화 가능 여부를 자동으로 확인합니다</p>
         <p><strong>역할별 점수:</strong> 딜러/서포터 역할에 맞는 효과 점수를 계산합니다</p>
+        <p><strong>우선순위:</strong></p>
+        <p>1. 코어 활성화 (최우선)</p>
+        <p>2. 역할별 효과 (딜러: 공격관련, 서포터: 지원관련)</p>
+        <p>3. 의지력/포인트 효율성</p>
+        <p>4. 효과 다양성</p>
         
         <div class="controls">
           <button onclick="window.close()">닫기</button>
@@ -1149,3 +1350,4 @@ function toggleHelp(){
   newWindow.document.write(helpContent);
   newWindow.document.close();
 }
+
